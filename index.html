@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistical Slot Machines</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <!-- Add Chart.js via CDN instead of local file -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add D3.js via CDN instead of local file -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Statistical Slot Machines</h1>
+        <a href="https://yourbloglink.com" target="_blank">Visit my blog</a>
+    </header>
+    <main>
+        <section id="distribution-selection">
+            <h2>Configure Slot Machines</h2>
+            
+            <div class="form-group">
+                <label for="num-machines">Number of Machines (2-8):</label>
+                <input type="number" id="num-machines" min="2" max="8" value="3">
+            </div>
+            
+            <div id="machine-configs">
+                <!-- Machine configurations will be dynamically generated here -->
+            </div>
+            
+            <button id="generate-machines">Generate Slot Machines</button>
+        </section>
+        
+        <section id="slot-machines">
+            <h2>Slot Machines</h2>
+            <div id="machines-container">
+                <!-- Slot machines will be dynamically generated here -->
+            </div>
+        </section>
+        
+        <section id="payout-chart">
+            <h2>Payout Chart</h2>
+            <canvas id="chart"></canvas>
+        </section>
+    </main>
+    
+    <!-- Add the missing distribution-select element -->
+    <select id="distribution-select" style="display: none;"></select>
+    
+    <!-- Add the missing submit-button element -->
+    <button id="submit-button" style="display: none;"></button>
+    
+    <script src="js/distributions.js" type="module"></script>
+    <script src="js/slotMachine.js" type="module"></script>
+    <script src="js/chart.js" type="module"></script>
+    <script src="js/optimalStrategy.js" type="module"></script>
+    <script src="js/app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+}
+
+form {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* More compact form controls */
+.form-group {
+    margin-bottom: 10px;
+}
+
+label {
+    display: inline-block;
+    margin: 5px 0 3px;
+    font-size: 14px;
+}
+
+select, input[type="number"] {
+    width: 100%;
+    padding: 6px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Compact machine configs */
+.machine-config {
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.machine-config h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+
+/* Compact slot machines */
+.slot-machine {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 150px;
+    height: auto;
+    margin: 10px;
+    background-color: #fff;
+    border: 1px solid #4CAF50;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.slot-machine:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.machine-header h3 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+}
+
+.machine-info {
+    font-size: 12px;
+    color: #666;
+}
+
+.machine-info p {
+    margin: 2px 0;
+}
+
+.machine-display {
+    margin: 10px 0;
+}
+
+.result {
+    font-size: 24px;
+    font-weight: bold;
+    color: #4CAF50; /* Default green for positive */
+}
+
+/* Add styling for negative payouts */
+.result.negative {
+    color: #F44336; /* Red for negative */
+}
+
+.machine-stats {
+    display: none; /* Hidden by default */
+    font-size: 12px;
+    border-top: 1px solid #eee;
+    padding-top: 5px;
+    margin-top: 5px;
+}
+
+.machine-stats p {
+    margin: 3px 0;
+}
+
+.pull-lever {
+    padding: 5px 10px;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.toggle-stats {
+    background-color: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 3px 6px;
+    font-size: 12px;
+    margin-top: 5px;
+    cursor: pointer;
+}
+
+.toggle-stats:hover {
+    background-color: #e0e0e0;
+}
+
+/* Compact layout for machine configuration section */
+#distribution-selection {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#machine-configs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.machine-config {
+    flex: 0 0 calc(33.33% - 10px);
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .machine-config {
+        flex: 0 0 calc(50% - 10px);
+    }
+}
+
+@media (max-width: 480px) {
+    .machine-config {
+        flex: 0 0 100%;
+    }
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.slot-machine {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 150px;
+    height: auto;
+    margin: 10px;
+    background-color: #fff;
+    border: 1px solid #4CAF50;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.slot-machine:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.chart-container {
+    margin-top: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart container styling */
+#payout-chart {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 15px;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Chart canvas size constraints */
+#chart {
+    width: 100% !important; 
+    height: 300px !important; /* Fixed height */
+    max-height: 300px;
+}
+
+footer {
+    text-align: center;
+    padding: 10px 0;
+    background-color: #4CAF50;
+    color: white;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Update slot machine container to center machines */
+#machines-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 20px auto;
+}
