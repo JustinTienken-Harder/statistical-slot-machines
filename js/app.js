@@ -17,6 +17,10 @@ const distributions = {
             sum += Math.pow(Math.random(), 2);
         }
         return sum;
+    },
+    bernoulli: (p) => {
+        // Return 1 with probability p, 0 with probability 1-p
+        return Math.random() < p ? 1 : 0;
     }
 };
 
@@ -57,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'uniform': ['Minimum', 'Maximum'],
         'chi-squared': ['Degrees of Freedom'],
         'exponential': ['Rate Parameter'],
-        'poisson': ['Lambda (Rate)']
+        'poisson': ['Lambda (Rate)'],
+        'bernoulli': ['Success Probability']
     };
     
     // Initialize machine configurations
@@ -126,7 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'uniform': [0, 1],
             'chi-squared': [1],
             'exponential': [1],
-            'poisson': [1]
+            'poisson': [1],
+            'bernoulli': [0.5]
         };
         
         return defaults[distributionType][paramIndex] || 0;

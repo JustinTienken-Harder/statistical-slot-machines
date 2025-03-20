@@ -140,6 +140,12 @@ function determineBestMachine() {
             case 'chi-squared':
                 ev = config.parameters[0]; // degrees of freedom
                 break;
+            case 'binomial':
+                ev = 100 * config.parameters[0]; // n * p (with fixed n=100)
+                break;
+            case 'bernoulli':
+                ev = config.parameters[0]; // p (directly the success probability)
+                break;
         }
         
         if (ev > highestEV) {

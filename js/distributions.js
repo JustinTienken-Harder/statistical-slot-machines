@@ -41,6 +41,11 @@ const Distributions = {
         return k - 1;
     },
     
+    bernoulli: function(p) {
+        // Return 1 with probability p, 0 with probability 1-p
+        return Math.random() < p ? 1 : 0;
+    },
+    
     // Sample from a distribution based on type and parameters
     sample: function(type, params) {
         switch(type) {
@@ -54,6 +59,8 @@ const Distributions = {
                 return this.exponential(params[0]);
             case 'poisson':
                 return this.poisson(params[0]);
+            case 'bernoulli':
+                return this.bernoulli(params[0]);
             default:
                 return 0;
         }
