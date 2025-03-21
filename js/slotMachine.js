@@ -84,6 +84,18 @@ function createSlotMachine(config) {
     // Create machine element
     const machineElement = document.createElement('div');
     machineElement.className = 'slot-machine';
+    
+    // Format parameters based on distribution type without rounding
+    const formattedParams = parameters.map(param => {
+        // For Bernoulli distribution, use the exact value entered by the user
+        if (distribution === 'bernoulli') {
+            // Display the exact parameter value without converting to a fixed number of decimal places
+            return param.toString();
+        }
+        // For other distributions, don't round to 2 decimal places
+        return param.toString();
+    }).join(', ');
+    
     machineElement.innerHTML = `
         <div class="machine-header">
             <h3>Machine ${id + 1}</h3>
@@ -95,7 +107,7 @@ function createSlotMachine(config) {
             <p>Pulls: <span id="pulls-${id}">0</span></p>
             <p>Avg Payout: <span id="avg-payout-${id}">0.00</span></p>
             <p>Distribution: ${distribution.charAt(0).toUpperCase() + distribution.slice(1)}</p>
-            <p>Parameters: ${parameters.map(p => p.toFixed(1)).join(', ')}</p>
+            <p>Parameters: ${formattedParams}</p>
         </div>
         <div class="machine-buttons">
             <button class="pull-lever" data-machine="${id}">Pull Lever</button>
@@ -105,14 +117,16 @@ function createSlotMachine(config) {
     
     // Add event listener for the lever pull
     const leverButton = machineElement.querySelector('.pull-lever');
-    leverButton.addEventListener('click', function() {
+    leverButton.addEventListener('click', function(event) {
+        event.stopPropagation(); // Prevent triggering the machine click event
         const machineId = parseInt(this.getAttribute('data-machine'));
         pullLever(machineId, distribution, parameters);
     });
     
     // Add event listener for the toggle stats button
     const toggleButton = machineElement.querySelector('.toggle-stats');
-    toggleButton.addEventListener('click', function() {
+    toggleButton.addEventListener('click', function(event) {
+        event.stopPropagation(); // Prevent triggering the machine click event
         const statsId = this.getAttribute('data-stats');
         const statsElement = document.getElementById(`stats-${statsId}`);
         if (statsElement.style.display === 'block') {
@@ -122,6 +136,18 @@ function createSlotMachine(config) {
             statsElement.style.display = 'block';
             this.textContent = 'Hide Stats';
         }
+    });
+    
+    // Add click event listener to the entire machine element
+    machineElement.addEventListener('click', function() {
+        // Don't trigger if clicking on buttons (handled by stopPropagation above)
+        pullLever(id, distribution, parameters);
+        
+        // Add a visual feedback for the click
+        this.classList.add('machine-clicked');
+        setTimeout(() => {
+            this.classList.remove('machine-clicked');
+        }, 200);
     });
     
     return machineElement;
