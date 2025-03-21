@@ -71,6 +71,155 @@ function resetMachineData() {
     }
 }
 
+// Hard mode tracking with better state management
+let hardModeEnabled = false;
+let originalMachineConfigs = [];
+let currentMachineConfigs = []; // Add tracking of current configuration
+
+// Function to toggle hard mode
+function toggleHardMode(enabled) {
+    hardModeEnabled = enabled;
+    console.log(`Hard Mode ${hardModeEnabled ? 'Enabled' : 'Disabled'}`);
+    
+    // If enabling hard mode, refresh machine configs
+    if (enabled) {
+        captureCurrentMachineConfigs();
+    }
+}
+
+// Function to store the original machine configurations
+function setOriginalMachineConfigs(configs) {
+    originalMachineConfigs = JSON.parse(JSON.stringify(configs)); // Deep copy
+    currentMachineConfigs = JSON.parse(JSON.stringify(configs)); // Initialize current configs
+    console.log("Original machine configurations stored:", originalMachineConfigs);
+}
+
+// Function to get current machine configurations from the DOM
+function captureCurrentMachineConfigs() {
+    const configs = [];
+    
+    // Collect configurations from the DOM
+    for (let i = 0; i < originalMachineConfigs.length; i++) {
+        const statsElement = document.getElementById(`stats-${i}`);
+        if (statsElement) {
+            // Get distribution type
+            const distribText = statsElement.querySelector('p:nth-child(3)').textContent;
+            const distribMatch = distribText.match(/Distribution: (.+)/);
+            const distribution = distribMatch ? distribMatch[1].toLowerCase() : 'normal';
+            
+            // Get parameters
+            const paramsText = statsElement.querySelector('p:nth-child(4)').textContent;
+            const paramsMatch = paramsText.match(/Parameters: (.+)/);
+            const params = paramsMatch 
+                ? paramsMatch[1].split(', ').map(p => parseFloat(p))
+                : [0, 1];
+            
+            configs.push({
+                id: i,
+                distribution,
+                parameters: params
+            });
+        }
+    }
+    
+    currentMachineConfigs = configs; // Update current configuration state
+    console.log("Current machine configs captured:", configs);
+    return configs;
+}
+
+// Public function to force a permutation (for testing)
+function forcePermutation() {
+    console.log("🧪 FORCING PERMUTATION FOR TESTING");
+    permuteAndUpdateMachines();
+}
+
+// Helper function to perform the permutation and update displays
+function permuteAndUpdateMachines() {
+    if (!currentMachineConfigs || !currentMachineConfigs.length) {
+        console.error("No machine configurations to permute!");
+        return false;
+    }
+    
+    console.log("🔄 Starting permutation of distributions!");
+    console.log("Configuration before permutation:", JSON.parse(JSON.stringify(currentMachineConfigs)));
+    
+    // Create a copy of the current configurations
+    const oldConfigs = JSON.parse(JSON.stringify(currentMachineConfigs));
+    const shuffledConfigs = JSON.parse(JSON.stringify(currentMachineConfigs));
+    
+    // Fisher-Yates shuffle of the configurations
+    for (let i = shuffledConfigs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        
+        // Only swap the distribution and parameters, not the IDs
+        [shuffledConfigs[i].distribution, shuffledConfigs[j].distribution] = 
+            [shuffledConfigs[j].distribution, shuffledConfigs[i].distribution];
+        
+        [shuffledConfigs[i].parameters, shuffledConfigs[j].parameters] = 
+            [shuffledConfigs[j].parameters, shuffledConfigs[i].parameters];
+    }
+    
+    // Check if any machines actually changed
+    let changesDetected = false;
+    for (let i = 0; i < oldConfigs.length; i++) {
+        if (oldConfigs[i].distribution !== shuffledConfigs[i].distribution ||
+            !arraysEqual(oldConfigs[i].parameters, shuffledConfigs[i].parameters)) {
+            changesDetected = true;
+            console.log(`Machine ${i+1} changed from ${oldConfigs[i].distribution} to ${shuffledConfigs[i].distribution}`);
+            break;
+        }
+    }
+    
+    // If no changes detected, try again
+    if (!changesDetected) {
+        console.log("⚠️ No changes detected after shuffle. Re-shuffling...");
+        return permuteAndUpdateMachines(); // Recursive call
+    }
+    
+    // Update the currentMachineConfigs state with the permuted configs
+    currentMachineConfigs = shuffledConfigs;
+    console.log("Configurations after permutation:", JSON.parse(JSON.stringify(currentMachineConfigs)));
+    
+    // Update machine displays with the new configurations (only visible in stats)
+    updateMachineDisplays();
+    
+    return true;
+}
+
+// Helper to check if two arrays are equal
+function arraysEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
+// Update the machine displays to show the new configurations
+function updateMachineDisplays() {
+    currentMachineConfigs.forEach(config => {
+        const statsElement = document.getElementById(`stats-${config.id}`);
+        if (statsElement) {
+            // Format parameters for display
+            const formattedParams = config.parameters.map(p => p.toString()).join(', ');
+            
+            // Update distribution and parameters displays
+            const distribElement = statsElement.querySelector('p:nth-child(3)');
+            const paramsElement = statsElement.querySelector('p:nth-child(4)');
+            
+            if (distribElement) {
+                distribElement.textContent = `Distribution: ${config.distribution.charAt(0).toUpperCase() + config.distribution.slice(1)}`;
+            }
+            
+            if (paramsElement) {
+                paramsElement.textContent = `Parameters: ${formattedParams}`;
+            }
+            
+            console.log(`Updated machine ${config.id + 1}'s display to ${config.distribution} with params [${formattedParams}]`);
+        }
+    });
+}
+
 function createSlotMachine(config) {
     const { id, distribution, parameters } = config;
     
@@ -153,9 +302,29 @@ function createSlotMachine(config) {
     return machineElement;
 }
 
+// Fix the permutation code to directly handle the 5% chance
 function pullLever(machineId, distribution, parameters) {
-    // Sample from the distribution
-    const payout = Distributions.sample(distribution, parameters);
+    // Hard Mode: Check for permutation with a 5% chance
+    if (hardModeEnabled && Math.random() < 0.05) {
+        console.log("💫 Hard Mode triggered a permutation!");
+        permuteAndUpdateMachines();
+    }
+    
+    // Get the current distribution and parameters for this machine
+    // This ensures we're using the potentially updated configuration after permutation
+    let currentDistribution = distribution;
+    let currentParameters = parameters;
+    
+    // Find the current configuration for this machine
+    const machineConfig = currentMachineConfigs.find(config => config.id === machineId);
+    if (machineConfig) {
+        currentDistribution = machineConfig.distribution;
+        currentParameters = machineConfig.parameters;
+        console.log(`Using machine ${machineId + 1}'s current config: ${currentDistribution} with params [${currentParameters}]`);
+    }
+    
+    // Sample from the distribution using the current (possibly swapped) configuration
+    const payout = Distributions.sample(currentDistribution, currentParameters);
     const formattedPayout = payout.toFixed(2);
     
     // Store the result for this pull (used by optimal strategy)
@@ -213,4 +382,14 @@ function pullLever(machineId, distribution, parameters) {
 }
 
 // Export the necessary functions and data
-export { createSlotMachine, totalPulls, machineData, latestPullResults, resetMachineData };
+export { 
+    createSlotMachine, 
+    totalPulls, 
+    machineData, 
+    latestPullResults, 
+    resetMachineData,
+    toggleHardMode,
+    setOriginalMachineConfigs,
+    forcePermutation,
+    currentMachineConfigs  // Export current configs for other modules
+};

@@ -1,7 +1,13 @@
 // Import necessary modules
 import { Distributions } from './distributions.js';
 import OptimalStrategy from './optimalStrategy.js';
-import { createSlotMachine, resetMachineData } from './slotMachine.js';
+import { 
+    createSlotMachine, 
+    resetMachineData, 
+    toggleHardMode, 
+    setOriginalMachineConfigs,
+    forcePermutation 
+} from './slotMachine.js';
 import { initializeChart, resetChart } from './chart.js';
 import { initializeRegretChart, resetRegretChart } from './regretChart.js';
 
@@ -74,6 +80,97 @@ document.addEventListener('DOMContentLoaded', () => {
     numMachinesInput.addEventListener('change', updateMachineConfigs);
     generateButton.addEventListener('click', generateSlotMachines);
     randomMachinesButton.addEventListener('click', generateRandomMachines);
+    
+    // DOM Elements for Hard Mode with improved selector
+    const hardModeToggle = document.getElementById('hard-mode');
+    
+    // Log element existence and add debug info to page
+    console.log('Hard Mode Toggle Element:', hardModeToggle);
+    
+    // Add a debug element to show hard mode status with test button
+    const debugElement = document.createElement('div');
+    debugElement.id = 'hard-mode-status';
+    debugElement.style.padding = '5px';
+    debugElement.style.margin = '10px 0';
+    debugElement.style.backgroundColor = '#f0f0f0';
+    debugElement.style.border = '1px solid #ccc';
+    debugElement.innerHTML = `
+        Hard Mode Status: Disabled
+        <button id="force-permute" class="test-button" style="display:none">
+            Test Permutation
+        </button>
+    `;
+    document.querySelector('.mode-toggle-container').appendChild(debugElement);
+    
+    // Add event listener for force permute button
+    const forcePermuteButton = document.getElementById('force-permute');
+    if (forcePermuteButton) {
+        forcePermuteButton.addEventListener('click', function() {
+            forcePermutation();
+        });
+    }
+    
+    // Add event listener for hard mode toggle with enhanced feedback
+    if (hardModeToggle) {
+        hardModeToggle.addEventListener('change', function() {
+            const isEnabled = this.checked;
+            console.log('Hard Mode Toggled:', isEnabled);
+            toggleHardMode(isEnabled);
+            
+            // Update visual status
+            const statusElement = document.getElementById('hard-mode-status');
+            const testButton = document.getElementById('force-permute');
+            
+            if (statusElement) {
+                statusElement.textContent = `Hard Mode Status: ${isEnabled ? 'ENABLED' : 'Disabled'}`;
+                statusElement.className = isEnabled ? 'enabled' : '';
+                
+                // Show/hide test button
+                if (testButton) {
+                    testButton.style.display = isEnabled ? 'inline-block' : 'none';
+                }
+            }
+            
+            // Show a warning when enabling hard mode
+            if (isEnabled) {
+                alert('Hard Mode enabled! There is now a 5% chance (1 in 20) that distributions will randomly swap when pulling a lever. Good luck!');
+            }
+        });
+    } else {
+        console.error('Hard Mode toggle element not found!');
+        // Try to create it if missing
+        createHardModeToggle();
+    }
+    
+    // Function to create hard mode toggle if missing
+    function createHardModeToggle() {
+        const container = document.createElement('div');
+        container.className = 'mode-toggle-container';
+        container.innerHTML = `
+            <label class="hard-mode-label">Hard Mode (5% chance of distributions swapping)</label>
+            <div class="toggle-switch">
+                <input type="checkbox" id="hard-mode">
+                <label for="hard-mode" class="toggle-slider"></label>
+            </div>
+        `;
+        
+        // Insert after number of machines input
+        const numMachinesGroup = document.querySelector('.form-group');
+        if (numMachinesGroup && numMachinesGroup.parentNode) {
+            numMachinesGroup.parentNode.insertBefore(container, numMachinesGroup.nextSibling);
+            
+            // Add event listener to the newly created toggle
+            const newToggle = document.getElementById('hard-mode');
+            if (newToggle) {
+                newToggle.addEventListener('change', function() {
+                    toggleHardMode(this.checked);
+                    if (this.checked) {
+                        alert('Hard Mode enabled! There is now a 5% chance that distributions will randomly swap when pulling a lever. Good luck!');
+                    }
+                });
+            }
+        }
+    }
     
     function updateMachineConfigs() {
         const numMachines = parseInt(numMachinesInput.value);
@@ -174,6 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
+        // Store the original configurations for Hard Mode
+        setOriginalMachineConfigs(machineConfigs);
+        
         // Clear previous machines
         machinesContainer.innerHTML = '';
         
@@ -252,6 +352,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 parameters: params
             });
         }
+        
+        // Store the original configurations for Hard Mode
+        setOriginalMachineConfigs(machineConfigs);
         
         // Clear previous machines
         machinesContainer.innerHTML = '';
