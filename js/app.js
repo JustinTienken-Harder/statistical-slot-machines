@@ -117,10 +117,19 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         
         params.forEach((param, i) => {
+            // Set step value based on distribution and parameter type
+            let stepValue = "0.01"; // Default step for most parameters
+            
+            // Set special step value for Bernoulli distribution
+            if (distributionType === 'bernoulli') {
+                stepValue = "0.001"; // Finer step for probability
+            }
+            
             html += `
                 <div class="form-group">
                     <label for="param-${machineIndex}-${i}">${param}:</label>
-                    <input type="number" id="param-${machineIndex}-${i}" class="param-input" step="0.1" value="${getDefaultValue(distributionType, i)}">
+                    <input type="number" id="param-${machineIndex}-${i}" class="param-input" 
+                        step="${stepValue}" value="${getDefaultValue(distributionType, i)}">
                 </div>
             `;
         });
@@ -270,26 +279,26 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'normal':
                 // Mean between -5 and 5, StdDev between 0.5 and 3
                 return [
-                    parseFloat((Math.random() * 10 - 5).toFixed(1)),
-                    parseFloat((Math.random() * 2.5 + 0.5).toFixed(1))
+                    parseFloat((Math.random() * 10 - 5).toFixed(2)),
+                    parseFloat((Math.random() * 2.5 + 0.5).toFixed(2))
                 ];
             case 'uniform':
                 // Generate min and max with at least 1 unit difference
-                const min = parseFloat((Math.random() * 10 - 5).toFixed(1));
-                const max = parseFloat((min + 1 + Math.random() * 5).toFixed(1));
+                const min = parseFloat((Math.random() * 10 - 5).toFixed(2));
+                const max = parseFloat((min + 1 + Math.random() * 5).toFixed(2));
                 return [min, max];
             case 'chi-squared':
                 // Degrees of freedom between 1 and 10
                 return [Math.floor(Math.random() * 10) + 1];
             case 'exponential':
                 // Rate parameter between 0.5 and 5
-                return [parseFloat((Math.random() * 4.5 + 0.5).toFixed(1))];
+                return [parseFloat((Math.random() * 4.5 + 0.5).toFixed(2))];
             case 'poisson':
                 // Lambda (rate) between 0.5 and 10
-                return [parseFloat((Math.random() * 9.5 + 0.5).toFixed(1))];
+                return [parseFloat((Math.random() * 9.5 + 0.5).toFixed(2))];
             case 'bernoulli':
-                // Success probability between 0.1 and 0.9
-                return [parseFloat((Math.random() * 0.8 + 0.1).toFixed(2))];
+                // Success probability between 0.1 and 0.9 with 3 decimal places
+                return [parseFloat((Math.random() * 0.8 + 0.1).toFixed(3))];
             default:
                 return [0];
         }
