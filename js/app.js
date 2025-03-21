@@ -131,9 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Show a warning when enabling hard mode
+            // Show a warning when enabling hard mode with updated message
             if (isEnabled) {
-                alert('Hard Mode enabled! There is now a 5% chance (1 in 20) that distributions will randomly swap when pulling a lever. Good luck!');
+                alert('Hard Mode enabled! There is now a 5% chance that distributions will silently swap between machines when pulling a lever. The only way to detect changes is by observing results over time. Good luck!');
             }
         });
     } else {

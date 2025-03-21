@@ -210,17 +210,25 @@ function updateChart(pulledMachineId, actualPayout, optimalMachineId) {
         payoutChart.data.datasets[0].data = payoutChart.data.datasets[0].data.slice(-maxDataPoints);
     }
     
-    // Update optimal strategy
-    updateOptimalStrategy(optimalMachineId, pulledMachineId, actualPayout);
+    // Generate payouts for all machines in this round to ensure consistency
+    // This will be used for both optimal strategy and best possible calculations
+    const roundPayouts = generateConsistentRoundPayouts(pulledMachineId, actualPayout);
+    
+    // Update optimal strategy using the consistent payouts
+    const optimalPayout = roundPayouts[optimalMachineId];
+    optimalStrategyTotalPayout += optimalPayout;
     payoutChart.data.datasets[1].data.push(optimalStrategyTotalPayout);
+    
+    // Update UCB estimates for optimal strategy
+    updateOptimalStrategyEstimates(optimalMachineId, optimalPayout);
     
     // Keep only the last maxDataPoints
     if (payoutChart.data.datasets[1].data.length > maxDataPoints) {
         payoutChart.data.datasets[1].data = payoutChart.data.datasets[1].data.slice(-maxDataPoints);
     }
     
-    // Calculate best possible payout for this round
-    const bestPossiblePayout = findBestPossiblePayout();
+    // Find the best possible payout from all machines for this round
+    const bestPossiblePayout = Math.max(...Object.values(roundPayouts));
     bestPossibleTotalPayout += bestPossiblePayout;
     payoutChart.data.datasets[2].data.push(bestPossibleTotalPayout);
     
@@ -234,38 +242,55 @@ function updateChart(pulledMachineId, actualPayout, optimalMachineId) {
     
     // Log current state for debugging
     console.log(`Pull ${totalPulls}: Your=${userTotalPayout.toFixed(2)}, Optimal=${optimalStrategyTotalPayout.toFixed(2)}, Best Possible=${bestPossibleTotalPayout.toFixed(2)}`);
+    console.log(`Round payouts:`, roundPayouts);
 }
 
-// Helper function to find the best possible payout for the current round
-function findBestPossiblePayout() {
-    // Sample from all machines and find the best payout
-    let bestPayout = -Infinity;
+// Helper function to generate consistent payouts for all machines in a single round
+function generateConsistentRoundPayouts(pulledMachineId, actualPayout) {
+    const roundPayouts = {};
     
+    // Use the same seed for all machines in this round to ensure consistency
+    const roundSeed = totalPulls;
+    
+    // For each machine, either use the actual result if it was pulled, or generate a consistent one
     machineConfigs.forEach(machine => {
-        // Sample each machine to see what it would have paid
-        const payout = Distributions.sample(machine.distribution, machine.parameters);
-        if (payout > bestPayout) {
-            bestPayout = payout;
+        if (machine.id === parseInt(pulledMachineId)) {
+            // Use the actual payout for the machine that was pulled
+            roundPayouts[machine.id] = actualPayout;
+        } else {
+            // Generate a deterministic payout based on the round number and machine ID
+            // Use a simple hash function to generate a "random" but consistent value
+            const hash = (roundSeed * 9301 + machine.id * 49297) % 233280;
+            const randomValue = hash / 233280;
+            
+            // Use this deterministic random value to sample from the distribution
+            let payout;
+            switch(machine.distribution) {
+                case 'bernoulli':
+                    payout = randomValue < machine.parameters[0] ? 1 : 0;
+                    break;
+                case 'normal':
+                    // Simplified normal approximation using the deterministic random value
+                    const u1 = randomValue;
+                    const u2 = (hash * 7919) % 233280 / 233280; // Another "random" value
+                    const z = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+                    payout = machine.parameters[0] + machine.parameters[1] * z;
+                    break;
+                // Add cases for other distributions as needed
+                default:
+                    // For other distributions, use the Distributions module with a fixed seed
+                    payout = Distributions.sample(machine.distribution, machine.parameters);
+            }
+            roundPayouts[machine.id] = payout;
         }
     });
     
-    return bestPayout;
+    return roundPayouts;
 }
 
-// Helper function to update optimal strategy
-function updateOptimalStrategy(optimalMachineId, pulledMachineId, actualPayout) {
-    if (!window.optimalMachineEstimates || machineConfigs.length === 0) return;
-    
-    // If optimal machine is the same as pulled machine, use the same payout
-    let payout;
-    if (optimalMachineId === pulledMachineId) {
-        payout = actualPayout;
-    } else {
-        // Otherwise sample from the distribution
-        const optimalMachine = machineConfigs.find(config => config.id === optimalMachineId);
-        if (!optimalMachine) return;
-        payout = Distributions.sample(optimalMachine.distribution, optimalMachine.parameters);
-    }
+// Helper function to update optimal strategy estimates
+function updateOptimalStrategyEstimates(optimalMachineId, payout) {
+    if (!window.optimalMachineEstimates) return;
     
     // Update estimates for the selected machine
     const machineEstimate = window.optimalMachineEstimates.find(m => m.id === optimalMachineId);
@@ -274,9 +299,6 @@ function updateOptimalStrategy(optimalMachineId, pulledMachineId, actualPayout) 
     machineEstimate.pulls++;
     machineEstimate.totalPayout += payout;
     machineEstimate.mean = machineEstimate.totalPayout / machineEstimate.pulls;
-    
-    // Add to total optimal strategy payout
-    optimalStrategyTotalPayout += payout;
 }
 
 // Helper function to get total payout across all machines
