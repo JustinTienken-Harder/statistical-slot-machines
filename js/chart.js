@@ -1,34 +1,54 @@
 // Import any dependencies
-import { machineData, totalPulls } from './slotMachine.js';
+import { machineData, totalPulls, latestPullResults } from './slotMachine.js';
 import { Distributions } from './distributions.js';
 
 let payoutChart = null;
 let machineConfigs = [];
 let optimalStrategyTotalPayout = 0;
-let bestMachineTotalPayout = 0;
+let bestPossibleTotalPayout = 0; // Changed name to reflect actual best possible payout
 let bestMachineIndex = -1;
+let bestMachineEV = 0;
+
+// Function to reset/destroy the chart
+function resetChart() {
+    if (payoutChart) {
+        // Destroy the existing chart to prevent memory leaks
+        payoutChart.destroy();
+        payoutChart = null;
+    }
+    
+    // Reset data
+    optimalStrategyTotalPayout = 0;
+    bestPossibleTotalPayout = 0;
+    bestMachineIndex = -1;
+    bestMachineEV = 0;
+    machineConfigs = [];
+}
 
 // Function to initialize the chart
 function initializeChart(configs) {
-    machineConfigs = configs;
+    // Reset the chart first to prevent duplicates
+    resetChart();
     
-    // Reset values
-    optimalStrategyTotalPayout = 0;
-    bestMachineTotalPayout = 0;
-    bestMachineIndex = -1;
+    machineConfigs = configs;
     
     // Determine best machine based on expected value
     determineBestMachine();
     
     const ctx = document.getElementById('chart').getContext('2d');
     
-    // Create three main datasets
+    // Define the viridis colors explicitly
+    const YOUR_COLOR = '#440154'; // Dark purple
+    const OPTIMAL_COLOR = '#21918c'; // Teal
+    const BEST_COLOR = '#FDE725'; // Yellow
+    
+    // Create three main datasets with updated colors from viridis palette
     const datasets = [
         {
             label: 'Your Total Payout',
             data: [0],
-            borderColor: 'rgba(0, 0, 0, 1)',
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            borderColor: YOUR_COLOR,
+            backgroundColor: `${YOUR_COLOR}20`, // 20 is hex for 12% opacity
             fill: false,
             borderWidth: 3,
             tension: 0.1
@@ -36,18 +56,18 @@ function initializeChart(configs) {
         {
             label: 'Optimal Strategy Total',
             data: [0],
-            borderColor: 'rgba(220, 20, 60, 1)', // Crimson
-            backgroundColor: 'rgba(220, 20, 60, 0.1)',
+            borderColor: OPTIMAL_COLOR,
+            backgroundColor: `${OPTIMAL_COLOR}20`,
             fill: false,
             borderDash: [5, 5],
             borderWidth: 2,
             tension: 0.1
         },
         {
-            label: 'Best Machine Total',
+            label: 'Best Possible Total',
             data: [0],
-            borderColor: 'rgba(50, 205, 50, 1)', // Lime Green
-            backgroundColor: 'rgba(50, 205, 50, 0.1)',
+            borderColor: BEST_COLOR,
+            backgroundColor: `${BEST_COLOR}20`,
             fill: false,
             borderDash: [10, 5],
             borderWidth: 2,
@@ -55,7 +75,7 @@ function initializeChart(configs) {
         }
     ];
     
-    // Create the chart
+    // Create the chart with explicit options to ensure colors are applied
     payoutChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -104,6 +124,15 @@ function initializeChart(configs) {
             },
             animation: {
                 duration: 0 // Disable animation for better performance
+            },
+            elements: {
+                line: {
+                    tension: 0.4 // Smooth curves
+                },
+                point: {
+                    radius: 2, // Smaller points
+                    hoverRadius: 5 // Larger on hover
+                }
             }
         }
     });
@@ -140,9 +169,6 @@ function determineBestMachine() {
             case 'chi-squared':
                 ev = config.parameters[0]; // degrees of freedom
                 break;
-            case 'binomial':
-                ev = 100 * config.parameters[0]; // n * p (with fixed n=100)
-                break;
             case 'bernoulli':
                 ev = config.parameters[0]; // p (directly the success probability)
                 break;
@@ -151,14 +177,15 @@ function determineBestMachine() {
         if (ev > highestEV) {
             highestEV = ev;
             bestMachineIndex = index;
+            bestMachineEV = ev; // Store the expected value
         }
     });
     
-    console.log(`Best machine determined to be Machine ${bestMachineIndex + 1} with EV ${highestEV}`);
+    console.log(`Best machine determined to be Machine ${bestMachineIndex + 1} with EV ${bestMachineEV}`);
 }
 
 // Function to update the chart after each lever pull
-function updateChart() {
+function updateChart(pulledMachineId, actualPayout, optimalMachineId) {
     if (!payoutChart || bestMachineIndex === -1) return;
     
     // Limit the number of data points to prevent the chart from becoming too large
@@ -183,8 +210,8 @@ function updateChart() {
         payoutChart.data.datasets[0].data = payoutChart.data.datasets[0].data.slice(-maxDataPoints);
     }
     
-    // Update optimal strategy by simulating a new pull
-    simulateOptimalStrategy();
+    // Update optimal strategy
+    updateOptimalStrategy(optimalMachineId, pulledMachineId, actualPayout);
     payoutChart.data.datasets[1].data.push(optimalStrategyTotalPayout);
     
     // Keep only the last maxDataPoints
@@ -192,9 +219,10 @@ function updateChart() {
         payoutChart.data.datasets[1].data = payoutChart.data.datasets[1].data.slice(-maxDataPoints);
     }
     
-    // Update best machine by simulating a new pull
-    simulateBestMachine();
-    payoutChart.data.datasets[2].data.push(bestMachineTotalPayout);
+    // Calculate best possible payout for this round
+    const bestPossiblePayout = findBestPossiblePayout();
+    bestPossibleTotalPayout += bestPossiblePayout;
+    payoutChart.data.datasets[2].data.push(bestPossibleTotalPayout);
     
     // Keep only the last maxDataPoints
     if (payoutChart.data.datasets[2].data.length > maxDataPoints) {
@@ -205,42 +233,42 @@ function updateChart() {
     payoutChart.update();
     
     // Log current state for debugging
-    console.log(`Pull ${totalPulls}: Your=${userTotalPayout.toFixed(2)}, Optimal=${optimalStrategyTotalPayout.toFixed(2)}, Best=${bestMachineTotalPayout.toFixed(2)}`);
+    console.log(`Pull ${totalPulls}: Your=${userTotalPayout.toFixed(2)}, Optimal=${optimalStrategyTotalPayout.toFixed(2)}, Best Possible=${bestPossibleTotalPayout.toFixed(2)}`);
 }
 
-// Helper function to simulate optimal strategy using UCB1 algorithm
-function simulateOptimalStrategy() {
-    if (!window.optimalMachineEstimates || machineConfigs.length === 0) return;
+// Helper function to find the best possible payout for the current round
+function findBestPossiblePayout() {
+    // Sample from all machines and find the best payout
+    let bestPayout = -Infinity;
     
-    // Find the machine with highest UCB
-    let bestMachineId = 0;
-    let bestUCB = -Infinity;
-    
-    window.optimalMachineEstimates.forEach(machine => {
-        // Update UCB for each machine
-        if (machine.pulls > 0) {
-            // UCB1 algorithm
-            const exploration = Math.sqrt(2 * Math.log(totalPulls) / machine.pulls);
-            machine.ucb = machine.mean + exploration;
-        } else {
-            machine.ucb = Infinity; // Unexplored machines have infinite potential
-        }
-        
-        if (machine.ucb > bestUCB) {
-            bestUCB = machine.ucb;
-            bestMachineId = machine.id;
+    machineConfigs.forEach(machine => {
+        // Sample each machine to see what it would have paid
+        const payout = Distributions.sample(machine.distribution, machine.parameters);
+        if (payout > bestPayout) {
+            bestPayout = payout;
         }
     });
     
-    // Find the configuration for the best machine
-    const bestMachine = machineConfigs.find(config => config.id === bestMachineId);
-    if (!bestMachine) return;
+    return bestPayout;
+}
+
+// Helper function to update optimal strategy
+function updateOptimalStrategy(optimalMachineId, pulledMachineId, actualPayout) {
+    if (!window.optimalMachineEstimates || machineConfigs.length === 0) return;
     
-    // Simulate pulling the lever of the best machine
-    const payout = Distributions.sample(bestMachine.distribution, bestMachine.parameters);
+    // If optimal machine is the same as pulled machine, use the same payout
+    let payout;
+    if (optimalMachineId === pulledMachineId) {
+        payout = actualPayout;
+    } else {
+        // Otherwise sample from the distribution
+        const optimalMachine = machineConfigs.find(config => config.id === optimalMachineId);
+        if (!optimalMachine) return;
+        payout = Distributions.sample(optimalMachine.distribution, optimalMachine.parameters);
+    }
     
     // Update estimates for the selected machine
-    const machineEstimate = window.optimalMachineEstimates.find(m => m.id === bestMachineId);
+    const machineEstimate = window.optimalMachineEstimates.find(m => m.id === optimalMachineId);
     if (!machineEstimate) return;
     
     machineEstimate.pulls++;
@@ -249,21 +277,6 @@ function simulateOptimalStrategy() {
     
     // Add to total optimal strategy payout
     optimalStrategyTotalPayout += payout;
-}
-
-// Helper function to simulate always picking the best machine
-function simulateBestMachine() {
-    if (bestMachineIndex === -1 || bestMachineIndex >= machineConfigs.length) return;
-    
-    // Get the best machine configuration
-    const bestMachine = machineConfigs[bestMachineIndex];
-    if (!bestMachine) return;
-    
-    // Simulate pulling the lever of the best machine
-    const payout = Distributions.sample(bestMachine.distribution, bestMachine.parameters);
-    
-    // Add to total best machine payout
-    bestMachineTotalPayout += payout;
 }
 
 // Helper function to get total payout across all machines
@@ -281,4 +294,4 @@ function getTotalUserPayout() {
 }
 
 // Export the chart functions
-export { initializeChart, updateChart };
+export { initializeChart, updateChart, resetChart };

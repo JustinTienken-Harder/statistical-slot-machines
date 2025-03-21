@@ -19,7 +19,9 @@
     <main>
         <section id="distribution-selection">
             <h2>Configure Slot Machines</h2>
-            
+            <h4>Select the distributions for the slot machines.
+                If you just want to "play" the game, click one of the premade buttons below for a set of random distributions.
+            </h4>
             <div class="form-group">
                 <label for="num-machines">Number of Machines (2-8):</label>
                 <input type="number" id="num-machines" min="2" max="8" value="3">
@@ -29,7 +31,10 @@
                 <!-- Machine configurations will be dynamically generated here -->
             </div>
             
-            <button id="generate-machines">Generate Slot Machines</button>
+            <div class="button-container">
+                <button id="generate-machines" class="primary-button">Generate Slot Machines</button>
+                <button id="random-machines" class="secondary-button">Generate Random Machines</button>
+            </div>
         </section>
         
         <section id="slot-machines">
@@ -42,6 +47,16 @@
         <section id="payout-chart">
             <h2>Payout Chart</h2>
             <canvas id="chart"></canvas>
+        </section>
+        
+        <section id="regret-section">
+            <div class="regret-header">
+                <h2>Regret Analysis</h2>
+                <button id="toggle-regret-chart" class="toggle-button">Show Regret Chart</button>
+            </div>
+            <div id="regret-chart-container" class="hidden">
+                <canvas id="regret-chart"></canvas>
+            </div>
         </section>
     </main>
     
@@ -56,5 +71,6 @@
     <script src="js/chart.js" type="module"></script>
     <script src="js/optimalStrategy.js" type="module"></script>
     <script src="js/app.js" type="module"></script>
+    <script src="js/regretChart.js" type="module"></script>
 </body>
 </html>

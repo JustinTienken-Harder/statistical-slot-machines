@@ -1,6 +1,7 @@
 // Import the Distributions module
 import { Distributions } from './distributions.js';
 import { updateChart } from './chart.js';
+import { updateRegretChart } from './regretChart.js';
 
 class SlotMachine {
     constructor(name, distributionFunc, payoutFunc) {
@@ -50,6 +51,25 @@ function resetMachines(machines) {
 
 let totalPulls = 0;
 const machineData = {};
+
+// Keep track of the latest pull result for each machine to ensure consistency
+const latestPullResults = {};
+
+// Function to reset all machine data
+function resetMachineData() {
+    // Reset total pulls
+    totalPulls = 0;
+    
+    // Clear machine data
+    for (const key in machineData) {
+        delete machineData[key];
+    }
+    
+    // Clear latest pull results
+    for (const key in latestPullResults) {
+        delete latestPullResults[key];
+    }
+}
 
 function createSlotMachine(config) {
     const { id, distribution, parameters } = config;
@@ -110,7 +130,13 @@ function createSlotMachine(config) {
 function pullLever(machineId, distribution, parameters) {
     // Sample from the distribution
     const payout = Distributions.sample(distribution, parameters);
-    const formattedPayout = payout.toFixed(2); // Allow negative valuesth.max(0, payout) to allow negative values
+    const formattedPayout = payout.toFixed(2);
+    
+    // Store the result for this pull (used by optimal strategy)
+    latestPullResults[totalPulls] = {
+        machineId,
+        payout
+    };
     
     // Update display
     const resultElement = document.getElementById(`result-${machineId}`);
@@ -135,9 +161,30 @@ function pullLever(machineId, distribution, parameters) {
     // Update total pulls
     totalPulls++;
     
-    // Update chart
-    updateChart();
+    // Get optimal machine from UCB algorithm
+    let optimalMachineId = 0;
+    let bestUCB = -Infinity;
+    
+    if (window.optimalMachineEstimates) {
+        window.optimalMachineEstimates.forEach(machine => {
+            if (machine.pulls > 0) {
+                const exploration = Math.sqrt(2 * Math.log(totalPulls) / machine.pulls);
+                machine.ucb = machine.mean + exploration;
+            } else {
+                machine.ucb = Infinity;
+            }
+            
+            if (machine.ucb > bestUCB) {
+                bestUCB = machine.ucb;
+                optimalMachineId = machine.id;
+            }
+        });
+    }
+    
+    // Update charts
+    updateChart(machineId, payout, optimalMachineId);
+    updateRegretChart(machineId, optimalMachineId);
 }
 
-// Export the necessary functions
-export { createSlotMachine, totalPulls, machineData };
+// Export the necessary functions and data
+export { createSlotMachine, totalPulls, machineData, latestPullResults, resetMachineData };

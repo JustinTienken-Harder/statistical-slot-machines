@@ -1,8 +1,9 @@
 // Import necessary modules
 import { Distributions } from './distributions.js';
 import OptimalStrategy from './optimalStrategy.js';
-import { createSlotMachine } from './slotMachine.js';
-import { initializeChart } from './chart.js';
+import { createSlotMachine, resetMachineData } from './slotMachine.js';
+import { initializeChart, resetChart } from './chart.js';
+import { initializeRegretChart, resetRegretChart } from './regretChart.js';
 
 const distributions = {
     normal: (mean, stdDev) => {
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const numMachinesInput = document.getElementById('num-machines');
     const machineConfigsContainer = document.getElementById('machine-configs');
     const generateButton = document.getElementById('generate-machines');
+    const randomMachinesButton = document.getElementById('random-machines');
     const machinesContainer = document.getElementById('machines-container');
     
     // Distribution types and their required parameters
@@ -71,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Listeners
     numMachinesInput.addEventListener('change', updateMachineConfigs);
     generateButton.addEventListener('click', generateSlotMachines);
+    randomMachinesButton.addEventListener('click', generateRandomMachines);
     
     function updateMachineConfigs() {
         const numMachines = parseInt(numMachinesInput.value);
@@ -139,6 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function generateSlotMachines() {
+        // Reset previous state
+        resetCharts();
+        
         const numMachines = parseInt(numMachinesInput.value);
         const machineConfigs = [];
         
@@ -168,8 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
             machinesContainer.appendChild(machine);
         });
         
-        // Initialize chart with machine configurations
+        // Initialize charts with machine configurations
         initializeChart(machineConfigs);
+        initializeRegretChart(machineConfigs);
         
         // Initialize optimal strategy
         initializeOptimalStrategy(machineConfigs);
@@ -186,6 +193,117 @@ document.addEventListener('DOMContentLoaded', () => {
             ucb: Infinity // Upper Confidence Bound
         }));
     };
+
+    // Add event listener for regret chart toggle
+    const toggleRegretChartButton = document.getElementById('toggle-regret-chart');
+    const regretChartContainer = document.getElementById('regret-chart-container');
+    
+    if (toggleRegretChartButton && regretChartContainer) {
+        toggleRegretChartButton.addEventListener('click', function() {
+            regretChartContainer.classList.toggle('hidden');
+            this.textContent = regretChartContainer.classList.contains('hidden') 
+                ? 'Show Regret Chart' 
+                : 'Hide Regret Chart';
+                
+            // If revealing the chart, we may need to resize it
+            if (!regretChartContainer.classList.contains('hidden')) {
+                window.dispatchEvent(new Event('resize'));
+            }
+        });
+    }
+
+    // Function to generate random machines
+    function generateRandomMachines() {
+        // Reset previous state
+        resetCharts();
+        
+        // Get number of machines from input (or generate random number between 2-8)
+        const numMachines = parseInt(numMachinesInput.value) || Math.floor(Math.random() * 7) + 2;
+        
+        // Update the input value to match the number of machines we'll create
+        numMachinesInput.value = numMachines;
+        
+        // Array of distribution types
+        const distTypes = Object.keys(distributionTypes);
+        
+        // Create array to hold machine configurations
+        const machineConfigs = [];
+        
+        // Create random machine configurations
+        for (let i = 0; i < numMachines; i++) {
+            // Select a random distribution type
+            const distributionType = distTypes[Math.floor(Math.random() * distTypes.length)];
+            
+            // Generate reasonable random parameters based on distribution type
+            const params = generateRandomParameters(distributionType);
+            
+            machineConfigs.push({
+                id: i,
+                distribution: distributionType,
+                parameters: params
+            });
+        }
+        
+        // Clear previous machines
+        machinesContainer.innerHTML = '';
+        
+        // Create slot machines
+        machineConfigs.forEach(config => {
+            const machine = createSlotMachine(config);
+            machinesContainer.appendChild(machine);
+        });
+        
+        // Initialize charts with machine configurations
+        initializeChart(machineConfigs);
+        initializeRegretChart(machineConfigs);
+        
+        // Initialize optimal strategy
+        initializeOptimalStrategy(machineConfigs);
+        
+        // Scroll to machines
+        document.getElementById('slot-machines').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Function to generate reasonable random parameters for each distribution type
+    function generateRandomParameters(distributionType) {
+        switch (distributionType) {
+            case 'normal':
+                // Mean between -5 and 5, StdDev between 0.5 and 3
+                return [
+                    parseFloat((Math.random() * 10 - 5).toFixed(1)),
+                    parseFloat((Math.random() * 2.5 + 0.5).toFixed(1))
+                ];
+            case 'uniform':
+                // Generate min and max with at least 1 unit difference
+                const min = parseFloat((Math.random() * 10 - 5).toFixed(1));
+                const max = parseFloat((min + 1 + Math.random() * 5).toFixed(1));
+                return [min, max];
+            case 'chi-squared':
+                // Degrees of freedom between 1 and 10
+                return [Math.floor(Math.random() * 10) + 1];
+            case 'exponential':
+                // Rate parameter between 0.5 and 5
+                return [parseFloat((Math.random() * 4.5 + 0.5).toFixed(1))];
+            case 'poisson':
+                // Lambda (rate) between 0.5 and 10
+                return [parseFloat((Math.random() * 9.5 + 0.5).toFixed(1))];
+            case 'bernoulli':
+                // Success probability between 0.1 and 0.9
+                return [parseFloat((Math.random() * 0.8 + 0.1).toFixed(2))];
+            default:
+                return [0];
+        }
+    }
+    
+    // Function to reset all charts and machine data
+    function resetCharts() {
+        // Reset chart data
+        resetChart();
+        resetRegretChart();
+        
+        // Reset machine data
+        resetMachineData();
+    }
 });
 
 function updateParameterInputs(distribution) {
