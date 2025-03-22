@@ -6,7 +6,8 @@ import {
     resetMachineData, 
     toggleHardMode, 
     setOriginalMachineConfigs,
-    forcePermutation 
+    forcePermutation,
+    initializeStrategy
 } from './slotMachine.js';
 import { initializeChart, resetChart } from './chart.js';
 import { initializeRegretChart, resetRegretChart } from './regretChart.js';
@@ -247,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return defaults[distributionType][paramIndex] || 0;
     }
     
-    function generateSlotMachines() {
+    async function generateSlotMachines() {
         // Reset previous state
         resetCharts();
         
@@ -287,21 +288,23 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeChart(machineConfigs);
         initializeRegretChart(machineConfigs);
         
-        // Initialize optimal strategy
-        initializeOptimalStrategy(machineConfigs);
+        // Get strategy type and options
+        const strategyType = document.getElementById('strategy-select').value || 'ucb';
+        let strategyOptions = {};
+        
+        // Get strategy-specific options
+        if (strategyType === 'abtest') {
+            const samplesPerMachine = parseInt(document.getElementById('samples-per-machine').value) || 10;
+            strategyOptions = { samplesPerMachine };
+        }
+        
+        // Initialize optimal strategy with selected algorithm
+        try {
+            await initializeStrategy(machineConfigs, strategyType, strategyOptions);
+        } catch (error) {
+            console.error("Error initializing strategy:", error);
+        }
     }
-
-    // Make initializeOptimalStrategy available
-    window.initializeOptimalStrategy = function(configs) {
-        // Initialize estimates for each machine
-        window.optimalMachineEstimates = configs.map(config => ({
-            id: config.id,
-            pulls: 0,
-            totalPayout: 0,
-            mean: 0,
-            ucb: Infinity // Upper Confidence Bound
-        }));
-    };
 
     // Add event listener for regret chart toggle
     const toggleRegretChartButton = document.getElementById('toggle-regret-chart');
@@ -322,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Function to generate random machines
-    function generateRandomMachines() {
+    async function generateRandomMachines() {
         // Reset previous state
         resetCharts();
         
@@ -369,8 +372,22 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeChart(machineConfigs);
         initializeRegretChart(machineConfigs);
         
-        // Initialize optimal strategy
-        initializeOptimalStrategy(machineConfigs);
+        // Get strategy type and options
+        const strategyType = document.getElementById('strategy-select').value || 'ucb';
+        let strategyOptions = {};
+        
+        // Get strategy-specific options
+        if (strategyType === 'abtest') {
+            const samplesPerMachine = parseInt(document.getElementById('samples-per-machine').value) || 10;
+            strategyOptions = { samplesPerMachine };
+        }
+        
+        // Initialize optimal strategy with selected algorithm
+        try {
+            await initializeStrategy(machineConfigs, strategyType, strategyOptions);
+        } catch (error) {
+            console.error("Error initializing strategy:", error);
+        }
         
         // Scroll to machines
         document.getElementById('slot-machines').scrollIntoView({ behavior: 'smooth' });
@@ -415,6 +432,45 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Reset machine data
         resetMachineData();
+    }
+
+    // Add strategy selection to the UI
+    const strategySection = document.createElement('div');
+    strategySection.className = 'strategy-selection';
+    strategySection.innerHTML = `
+        <h3>Select Strategy</h3>
+        <div class="form-group">
+            <label for="strategy-select">Strategy:</label>
+            <select id="strategy-select">
+                <option value="ucb">Upper Confidence Bound (UCB)</option>
+                <option value="abtest">A/B/C Testing</option>
+            </select>
+        </div>
+        <div class="form-group" id="abtest-options" style="display: none;">
+            <label for="samples-per-machine">Samples per machine:</label>
+            <input type="number" id="samples-per-machine" min="5" max="100" value="10">
+        </div>
+    `;
+    
+    // Insert after the number of machines input
+    const modeToggleContainer = document.querySelector('.mode-toggle-container');
+    if (modeToggleContainer && modeToggleContainer.parentNode) {
+        modeToggleContainer.parentNode.insertBefore(strategySection, modeToggleContainer.nextSibling);
+        
+        // Add listener for strategy selection change
+        const strategySelect = document.getElementById('strategy-select');
+        const abtestOptions = document.getElementById('abtest-options');
+        
+        if (strategySelect) {
+            strategySelect.addEventListener('change', function() {
+                // Show/hide options specific to A/B testing
+                if (this.value === 'abtest') {
+                    abtestOptions.style.display = 'block';
+                } else {
+                    abtestOptions.style.display = 'none';
+                }
+            });
+        }
     }
 });
 

@@ -2,6 +2,7 @@
 import { Distributions } from './distributions.js';
 import { updateChart } from './chart.js';
 import { updateRegretChart } from './regretChart.js';
+import { StrategyFactory } from './strategies/Strategy.js';
 
 class SlotMachine {
     constructor(name, distributionFunc, payoutFunc) {
@@ -55,6 +56,32 @@ const machineData = {};
 // Keep track of the latest pull result for each machine to ensure consistency
 const latestPullResults = {};
 
+// Global variable to hold the strategy
+let optimalStrategy = null;
+
+// Function to initialize the optimal strategy
+async function initializeStrategy(configs, strategyType = 'ucb', options = {}) {
+    try {
+        console.log(`Initializing ${strategyType} strategy with options:`, options);
+        
+        optimalStrategy = await StrategyFactory.createStrategy(strategyType, configs, options);
+        console.log(`${strategyType} strategy initialized successfully:`, optimalStrategy);
+        
+        return optimalStrategy;
+    } catch (error) {
+        console.error("Error initializing strategy:", error);
+        // Fallback to UCB if the requested strategy fails
+        console.log("Falling back to UCB strategy");
+        try {
+            optimalStrategy = await StrategyFactory.createStrategy('ucb', configs);
+            return optimalStrategy;
+        } catch (fallbackError) {
+            console.error("Fallback strategy initialization also failed:", fallbackError);
+            return null;
+        }
+    }
+}
+
 // Function to reset all machine data
 function resetMachineData() {
     // Reset total pulls
@@ -68,6 +95,11 @@ function resetMachineData() {
     // Clear latest pull results
     for (const key in latestPullResults) {
         delete latestPullResults[key];
+    }
+    
+    // Reset strategy if it exists
+    if (optimalStrategy) {
+        optimalStrategy.reset();
     }
 }
 
@@ -356,24 +388,16 @@ function pullLever(machineId, distribution, parameters) {
     // Update total pulls
     totalPulls++;
     
-    // Get optimal machine from UCB algorithm
-    let optimalMachineId = 0;
-    let bestUCB = -Infinity;
+    // Update optimal strategy with the result of this pull
+    if (optimalStrategy) {
+        optimalStrategy.update(machineId, payout);
+    }
     
-    if (window.optimalMachineEstimates) {
-        window.optimalMachineEstimates.forEach(machine => {
-            if (machine.pulls > 0) {
-                const exploration = Math.sqrt(2 * Math.log(totalPulls) / machine.pulls);
-                machine.ucb = machine.mean + exploration;
-            } else {
-                machine.ucb = Infinity;
-            }
-            
-            if (machine.ucb > bestUCB) {
-                bestUCB = machine.ucb;
-                optimalMachineId = machine.id;
-            }
-        });
+    // Get optimal machine from the strategy
+    let optimalMachineId = 0;
+    
+    if (optimalStrategy) {
+        optimalMachineId = optimalStrategy.selectMachine();
     }
     
     // Update charts
@@ -391,5 +415,7 @@ export {
     toggleHardMode,
     setOriginalMachineConfigs,
     forcePermutation,
-    currentMachineConfigs  // Export current configs for other modules
+    currentMachineConfigs,
+    initializeStrategy,
+    optimalStrategy
 };

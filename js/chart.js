@@ -1,5 +1,5 @@
 // Import any dependencies
-import { machineData, totalPulls, latestPullResults } from './slotMachine.js';
+import { machineData, totalPulls, latestPullResults, optimalStrategy } from './slotMachine.js';
 import { Distributions } from './distributions.js';
 
 let payoutChart = null;
@@ -219,9 +219,6 @@ function updateChart(pulledMachineId, actualPayout, optimalMachineId) {
     optimalStrategyTotalPayout += optimalPayout;
     payoutChart.data.datasets[1].data.push(optimalStrategyTotalPayout);
     
-    // Update UCB estimates for optimal strategy
-    updateOptimalStrategyEstimates(optimalMachineId, optimalPayout);
-    
     // Keep only the last maxDataPoints
     if (payoutChart.data.datasets[1].data.length > maxDataPoints) {
         payoutChart.data.datasets[1].data = payoutChart.data.datasets[1].data.slice(-maxDataPoints);
@@ -286,19 +283,6 @@ function generateConsistentRoundPayouts(pulledMachineId, actualPayout) {
     });
     
     return roundPayouts;
-}
-
-// Helper function to update optimal strategy estimates
-function updateOptimalStrategyEstimates(optimalMachineId, payout) {
-    if (!window.optimalMachineEstimates) return;
-    
-    // Update estimates for the selected machine
-    const machineEstimate = window.optimalMachineEstimates.find(m => m.id === optimalMachineId);
-    if (!machineEstimate) return;
-    
-    machineEstimate.pulls++;
-    machineEstimate.totalPayout += payout;
-    machineEstimate.mean = machineEstimate.totalPayout / machineEstimate.pulls;
 }
 
 // Helper function to get total payout across all machines
