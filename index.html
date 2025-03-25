@@ -16,6 +16,118 @@
         <h1>Statistical Slot Machines</h1>
         <a href="https://yourbloglink.com" target="_blank">Visit my blog</a>
     </header>
+    
+    <!-- Strategy Sidebar Toggle Button -->
+    <button id="sidebar-toggle" class="sidebar-toggle">
+        <span class="icon">⚙️</span>
+    </button>
+    
+    <!-- Strategy Sidebar -->
+    <div id="strategy-sidebar" class="strategy-sidebar">
+        <h2>Strategies</h2>
+        <p>Select one or more strategies to compare:</p>
+        
+        <div class="strategy-section">
+            <div class="strategy-option">
+                <input type="checkbox" id="strategy-ucb" class="strategy-checkbox" data-strategy="ucb" checked>
+                <label for="strategy-ucb">
+                    Upper Confidence Bound (UCB)
+                    <span class="strategy-badge badge-default">Default</span>
+                </label>
+            </div>
+            
+            <div class="strategy-option">
+                <input type="checkbox" id="strategy-ns-ucb" class="strategy-checkbox" data-strategy="ns-ucb">
+                <label for="strategy-ns-ucb">
+                    Non-Stationary UCB 
+                    <span class="adaptive-note">(adaptive)</span>
+                </label>
+            </div>
+            
+            <div class="strategy-option">
+                <input type="checkbox" id="strategy-abtest" class="strategy-checkbox" data-strategy="abtest">
+                <label for="strategy-abtest">A/B/C Testing</label>
+            </div>
+            
+            <div class="strategy-option">
+                <input type="checkbox" id="strategy-exp3" class="strategy-checkbox" data-strategy="exp3">
+                <label for="strategy-exp3">EXP3 (Adversarial)</label>
+            </div>
+            
+            <div class="strategy-option">
+                <input type="checkbox" id="strategy-exp3r" class="strategy-checkbox" data-strategy="exp3r">
+                <label for="strategy-exp3r">
+                    EXP3-R 
+                    <span class="adaptive-note">(adaptive adversarial)</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- UCB Settings Section -->
+        <div id="settings-ucb" class="settings-section active">
+            <h4>UCB Settings</h4>
+            <p>Standard UCB algorithm has no adjustable parameters.</p>
+        </div>
+        
+        <!-- Non-Stationary UCB Settings Section -->
+        <div id="settings-ns-ucb" class="settings-section">
+            <h4>Non-Stationary UCB Settings</h4>
+            <div class="form-group">
+                <label for="window-size">Window size:</label>
+                <input type="number" id="window-size" min="5" max="100" value="20">
+            </div>
+            <div class="form-group">
+                <label for="change-threshold">Change detection threshold:</label>
+                <input type="number" id="change-threshold" min="5" max="200" value="50">
+            </div>
+        </div>
+        
+        <!-- A/B Test Settings Section -->
+        <div id="settings-abtest" class="settings-section">
+            <h4>A/B Test Settings</h4>
+            <div class="form-group">
+                <label for="samples-per-machine">Samples per machine:</label>
+                <input type="number" id="samples-per-machine" min="5" max="100" value="10">
+            </div>
+        </div>
+        
+        <!-- EXP3 Settings Section -->
+        <div id="settings-exp3" class="settings-section">
+            <h4>EXP3 Settings</h4>
+            <div class="form-group">
+                <label for="exp3-gamma">Exploration (gamma):</label>
+                <input type="number" id="exp3-gamma" min="0.01" max="0.5" step="0.01" value="0.1">
+            </div>
+            <div class="form-group">
+                <label for="exp3-eta">Learning rate (eta):</label>
+                <input type="number" id="exp3-eta" min="0.01" max="0.5" step="0.01" value="0.1">
+            </div>
+        </div>
+        
+        <!-- EXP3-R Settings Section -->
+        <div id="settings-exp3r" class="settings-section">
+            <h4>EXP3-R Settings</h4>
+            <div class="form-group">
+                <label for="exp3r-gamma">Exploration (gamma):</label>
+                <input type="number" id="exp3r-gamma" min="0.01" max="0.5" step="0.01" value="0.1">
+            </div>
+            <div class="form-group">
+                <label for="exp3r-eta">Learning rate (eta):</label>
+                <input type="number" id="exp3r-eta" min="0.01" max="0.5" step="0.01" value="0.1">
+            </div>
+            <div class="form-group">
+                <label for="exp3r-window">Window size:</label>
+                <input type="number" id="exp3r-window" min="5" max="100" value="20">
+            </div>
+            <div class="form-group">
+                <label for="exp3r-threshold">Threshold multiplier:</label>
+                <input type="number" id="exp3r-threshold" min="0.5" max="5" step="0.1" value="2.0">
+            </div>
+        </div>
+        
+        <button id="apply-strategies" class="btn-apply">Apply Strategies</button>
+    </div>
+    
     <main>
         <section id="distribution-selection">
             <h2>Configure Slot Machines</h2>
@@ -67,6 +179,9 @@
                 <canvas id="regret-chart"></canvas>
             </div>
         </section>
+        
+        <!-- Strategy Legend for Charts - Will be populated dynamically -->
+        <div id="strategy-legend" class="strategy-legend" style="display: none;"></div>
     </main>
     
     <!-- Add the missing distribution-select element -->
