@@ -231,4 +231,31 @@ export class MultiStrategyManager {
     getSelectedTypes() {
         return this.selectedTypes;
     }
+
+    /**
+     * Debug method to check sidebar functionality
+     */
+    testSidebarToggle() {
+        const sidebar = document.getElementById('strategy-sidebar');
+        const toggle = document.getElementById('sidebar-toggle');
+        
+        console.log('Sidebar elements found:', {
+            sidebar: !!sidebar,
+            toggle: !!toggle
+        });
+        
+        if (sidebar) {
+            const currentState = sidebar.classList.contains('open') ? 'open' : 'closed';
+            console.log('Current sidebar state:', currentState);
+            console.log('Sidebar styles:', {
+                right: getComputedStyle(sidebar).right,
+                visibility: getComputedStyle(sidebar).visibility,
+                display: getComputedStyle(sidebar).display,
+                width: getComputedStyle(sidebar).width,
+                zIndex: getComputedStyle(sidebar).zIndex
+            });
+        }
+        
+        return {sidebar, toggle};
+    }
 }

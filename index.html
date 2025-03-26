@@ -17,12 +17,15 @@
         <a href="https://justintienken-harder.github.io" target="_blank">Visit my blog</a>
     </header>
     
-    <!-- Strategy Sidebar Toggle Button -->
+    <!-- Add a semi-transparent overlay for when the sidebar is open -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Strategy Sidebar Toggle Button - Updated for better visibility -->
     <button id="sidebar-toggle" class="sidebar-toggle">
         <span class="icon">⚙️</span>
     </button>
     
-    <!-- Strategy Sidebar -->
+    <!-- Strategy Sidebar - No changes needed here, just making sure it exists -->
     <div id="strategy-sidebar" class="strategy-sidebar">
         <h2>Strategies</h2>
         <p>Select one or more strategies to compare:</p>
@@ -133,6 +136,7 @@
             <h2>Configure Slot Machines</h2>
             <h4>Select the distributions for the slot machines.
                 If you just want to "play" the game, click one of the premade buttons below for a set of random distributions.
+                Use the gear icon (⚙️) in the top right to select which algorithms to compare.
             </h4>
             <div class="form-group">
                 <label for="num-machines">Number of Machines (2-8):</label>

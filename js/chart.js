@@ -1,13 +1,13 @@
 // Import any dependencies
-import { machineData, totalPulls, latestPullResults, optimalStrategy } from './slotMachine.js';
+import { machineData, totalPulls, latestPullResults } from './slotMachine.js';
 import { Distributions } from './distributions.js';
 
 let payoutChart = null;
 let machineConfigs = [];
-let optimalStrategyTotalPayout = 0;
-let bestPossibleTotalPayout = 0; // Changed name to reflect actual best possible payout
+let strategyPayouts = {}; // Track payouts for each strategy
+let bestPossibleTotalPayout = 0;
 let bestMachineIndex = -1;
-let bestMachineEV = 0;
+let bestMachineEV = 0; // Define this variable to fix the reference error
 
 // Function to reset/destroy the chart
 function resetChart() {
@@ -18,10 +18,10 @@ function resetChart() {
     }
     
     // Reset data
-    optimalStrategyTotalPayout = 0;
+    strategyPayouts = {};
     bestPossibleTotalPayout = 0;
     bestMachineIndex = -1;
-    bestMachineEV = 0;
+    bestMachineEV = 0; // Reset this variable as well
     machineConfigs = [];
 }
 
@@ -37,37 +37,22 @@ function initializeChart(configs) {
     
     const ctx = document.getElementById('chart').getContext('2d');
     
-    // Define the viridis colors explicitly
-    const YOUR_COLOR = '#440154'; // Dark purple
-    const OPTIMAL_COLOR = '#21918c'; // Teal
-    const BEST_COLOR = '#FDE725'; // Yellow
-    
-    // Create three main datasets with updated colors from viridis palette
+    // Define base datasets
     const datasets = [
         {
             label: 'Your Total Payout',
             data: [0],
-            borderColor: YOUR_COLOR,
-            backgroundColor: `${YOUR_COLOR}20`, // 20 is hex for 12% opacity
+            borderColor: '#440154', // Dark purple
+            backgroundColor: `#44015420`,
             fill: false,
             borderWidth: 3,
             tension: 0.1
         },
         {
-            label: 'Optimal Strategy Total',
-            data: [0],
-            borderColor: OPTIMAL_COLOR,
-            backgroundColor: `${OPTIMAL_COLOR}20`,
-            fill: false,
-            borderDash: [5, 5],
-            borderWidth: 2,
-            tension: 0.1
-        },
-        {
             label: 'Best Possible Total',
             data: [0],
-            borderColor: BEST_COLOR,
-            backgroundColor: `${BEST_COLOR}20`,
+            borderColor: '#FDE725', // Yellow
+            backgroundColor: `#FDE72520`,
             fill: false,
             borderDash: [10, 5],
             borderWidth: 2,
@@ -75,7 +60,7 @@ function initializeChart(configs) {
         }
     ];
     
-    // Create the chart with explicit options to ensure colors are applied
+    // Create the chart with explicit options
     payoutChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -92,7 +77,7 @@ function initializeChart(configs) {
                         text: 'Number of Pulls'
                     },
                     ticks: {
-                        maxTicksLimit: 10 // Limit the number of x-axis ticks
+                        maxTicksLimit: 10
                     }
                 },
                 y: {
@@ -150,6 +135,8 @@ function initializeChart(configs) {
 // Function to determine the best machine based on expected value
 function determineBestMachine() {
     let highestEV = -Infinity;
+    bestMachineIndex = -1; // Reset before determining
+    bestMachineEV = -Infinity; // Also reset this value
     
     machineConfigs.forEach((config, index) => {
         let ev = 0;
@@ -177,7 +164,7 @@ function determineBestMachine() {
         if (ev > highestEV) {
             highestEV = ev;
             bestMachineIndex = index;
-            bestMachineEV = ev; // Store the expected value
+            bestMachineEV = ev; // Properly assign the value here
         }
     });
     
@@ -185,7 +172,7 @@ function determineBestMachine() {
 }
 
 // Function to update the chart after each lever pull
-function updateChart(pulledMachineId, actualPayout, optimalMachineId) {
+function updateChart(pulledMachineId, actualPayout, recommendations) {
     if (!payoutChart || bestMachineIndex === -1) return;
     
     // Limit the number of data points to prevent the chart from becoming too large
@@ -211,35 +198,163 @@ function updateChart(pulledMachineId, actualPayout, optimalMachineId) {
     }
     
     // Generate payouts for all machines in this round to ensure consistency
-    // This will be used for both optimal strategy and best possible calculations
     const roundPayouts = generateConsistentRoundPayouts(pulledMachineId, actualPayout);
     
-    // Update optimal strategy using the consistent payouts
-    const optimalPayout = roundPayouts[optimalMachineId];
-    optimalStrategyTotalPayout += optimalPayout;
-    payoutChart.data.datasets[1].data.push(optimalStrategyTotalPayout);
+    // Make sure recommendations is an object (even if empty)
+    recommendations = recommendations || {};
     
-    // Keep only the last maxDataPoints
-    if (payoutChart.data.datasets[1].data.length > maxDataPoints) {
-        payoutChart.data.datasets[1].data = payoutChart.data.datasets[1].data.slice(-maxDataPoints);
+    // Update payouts for each strategy using the strategy recommendations
+    for (const strategyType in recommendations) {
+        const optimalMachineId = recommendations[strategyType];
+        
+        // Make sure we have a valid machine ID and can find it in roundPayouts
+        if (optimalMachineId === undefined || roundPayouts[optimalMachineId] === undefined) {
+            console.warn(`Skip updating chart for ${strategyType}: Invalid machine ID ${optimalMachineId}`);
+            continue;
+        }
+        
+        const strategyPayout = roundPayouts[optimalMachineId];
+        
+        // Initialize strategy payout if needed
+        if (strategyPayouts[strategyType] === undefined) {
+            strategyPayouts[strategyType] = 0;
+            
+            // Initialize the dataset for this strategy
+            addStrategyDataset(strategyType);
+        }
+        
+        // Accumulate payout for this strategy
+        strategyPayouts[strategyType] += strategyPayout;
+        
+        // Find the dataset index for this strategy
+        const datasetIndex = payoutChart.data.datasets.findIndex(ds => 
+            ds.label && ds.label.includes(getStrategyLabel(strategyType))
+        );
+        
+        if (datasetIndex !== -1) {
+            // Ensure we have a data array initialized for this dataset
+            if (!payoutChart.data.datasets[datasetIndex].data) {
+                payoutChart.data.datasets[datasetIndex].data = [];
+            }
+            
+            // Initialize with zeros if the array doesn't have enough elements
+            while (payoutChart.data.datasets[datasetIndex].data.length < payoutChart.data.labels.length - 1) {
+                payoutChart.data.datasets[datasetIndex].data.push(0);
+            }
+            
+            // Update the dataset with the new payout
+            payoutChart.data.datasets[datasetIndex].data.push(strategyPayouts[strategyType]);
+            
+            // Keep only the last maxDataPoints
+            if (payoutChart.data.datasets[datasetIndex].data.length > maxDataPoints) {
+                payoutChart.data.datasets[datasetIndex].data = 
+                    payoutChart.data.datasets[datasetIndex].data.slice(-maxDataPoints);
+            }
+            
+            console.log(`Updated chart for ${strategyType}: value=${strategyPayouts[strategyType].toFixed(2)}`);
+        } else {
+            console.warn(`Dataset for strategy ${strategyType} not found`);
+        }
     }
     
     // Find the best possible payout from all machines for this round
     const bestPossiblePayout = Math.max(...Object.values(roundPayouts));
     bestPossibleTotalPayout += bestPossiblePayout;
-    payoutChart.data.datasets[2].data.push(bestPossibleTotalPayout);
     
-    // Keep only the last maxDataPoints
-    if (payoutChart.data.datasets[2].data.length > maxDataPoints) {
-        payoutChart.data.datasets[2].data = payoutChart.data.datasets[2].data.slice(-maxDataPoints);
+    // Make sure the best possible dataset index is valid
+    const bestPossibleIndex = payoutChart.data.datasets.length - 1;
+    if (bestPossibleIndex >= 0) {
+        payoutChart.data.datasets[bestPossibleIndex].data.push(bestPossibleTotalPayout);
+        
+        // Keep only the last maxDataPoints
+        if (payoutChart.data.datasets[bestPossibleIndex].data.length > maxDataPoints) {
+            payoutChart.data.datasets[bestPossibleIndex].data = 
+                payoutChart.data.datasets[bestPossibleIndex].data.slice(-maxDataPoints);
+        }
     }
     
-    // Update the chart
-    payoutChart.update();
+    try {
+        // Ensure all datasets have the same length
+        const expectedLength = payoutChart.data.labels.length;
+        payoutChart.data.datasets.forEach(dataset => {
+            // Fill with last value if dataset is shorter than expected
+            while (dataset.data.length < expectedLength) {
+                const lastValue = dataset.data.length > 0 ? dataset.data[dataset.data.length - 1] : 0;
+                dataset.data.push(lastValue);
+            }
+            
+            // Trim if dataset is longer than expected
+            if (dataset.data.length > expectedLength) {
+                dataset.data = dataset.data.slice(0, expectedLength);
+            }
+        });
+        
+        // Update the chart with try-catch to prevent errors
+        payoutChart.update('none'); // Use 'none' mode to skip animations
+    } catch (error) {
+        console.error("Error updating chart:", error);
+    }
     
     // Log current state for debugging
+    let optimalStrategyTotalPayout = 0;
+    for (const type in strategyPayouts) {
+        if (strategyPayouts[type] > optimalStrategyTotalPayout) {
+            optimalStrategyTotalPayout = strategyPayouts[type];
+        }
+    }
     console.log(`Pull ${totalPulls}: Your=${userTotalPayout.toFixed(2)}, Optimal=${optimalStrategyTotalPayout.toFixed(2)}, Best Possible=${bestPossibleTotalPayout.toFixed(2)}`);
-    console.log(`Round payouts:`, roundPayouts);
+}
+
+// Helper function to add a dataset for a new strategy
+function addStrategyDataset(strategyType) {
+    const strategyColors = {
+        'ucb': '#4285F4',      // Google Blue
+        'ns-ucb': '#34A853',   // Google Green
+        'abtest': '#FBBC05',   // Google Yellow
+        'exp3': '#EA4335',     // Google Red
+        'exp3r': '#8F44AD'     // Purple
+    };
+    
+    const color = strategyColors[strategyType] || '#999999';
+    
+    // Create a new dataset for this strategy
+    const newDataset = {
+        label: getStrategyLabel(strategyType),
+        data: [],  // Start with an empty array
+        borderColor: color,
+        backgroundColor: `${color}20`,
+        fill: false,
+        borderWidth: 2,
+        tension: 0.1
+    };
+    
+    // Fill the dataset with zeros up to the current label count
+    if (payoutChart && payoutChart.data && payoutChart.data.labels) {
+        for (let i = 0; i < payoutChart.data.labels.length - 1; i++) {
+            newDataset.data.push(0);
+        }
+    }
+    
+    // Insert the new dataset before the best possible dataset
+    // Make sure we have at least one dataset before trying to insert
+    if (payoutChart && payoutChart.data && payoutChart.data.datasets && payoutChart.data.datasets.length > 0) {
+        payoutChart.data.datasets.splice(payoutChart.data.datasets.length - 1, 0, newDataset);
+    } else {
+        console.error("Cannot add strategy dataset: chart not properly initialized");
+    }
+}
+
+// Helper function to get a friendly label for a strategy type
+function getStrategyLabel(strategyType) {
+    const labels = {
+        'ucb': 'UCB Strategy',
+        'ns-ucb': 'Non-Stationary UCB',
+        'abtest': 'A/B Testing',
+        'exp3': 'EXP3 Strategy',
+        'exp3r': 'EXP3-R Strategy'
+    };
+    
+    return labels[strategyType] || strategyType;
 }
 
 // Helper function to generate consistent payouts for all machines in a single round

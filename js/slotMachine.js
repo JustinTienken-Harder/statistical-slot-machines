@@ -59,6 +59,14 @@ const latestPullResults = {};
 // Global variable to hold the strategy
 let optimalStrategy = null;
 
+// Global variable to hold the strategy manager
+let strategyManager = null;
+
+// Function to set the strategy manager
+function setStrategyManager(manager) {
+    strategyManager = manager;
+}
+
 // Function to initialize the optimal strategy
 async function initializeStrategy(configs, strategyType = 'ucb', options = {}) {
     try {
@@ -393,16 +401,20 @@ function pullLever(machineId, distribution, parameters) {
         optimalStrategy.update(machineId, payout);
     }
     
-    // Get optimal machine from the strategy
-    let optimalMachineId = 0;
-    
-    if (optimalStrategy) {
-        optimalMachineId = optimalStrategy.selectMachine();
+    // Update all strategies with the result
+    if (strategyManager) {
+        strategyManager.update(machineId, payout);
+        
+        // Get recommendations from all active strategies
+        const recommendations = strategyManager.getRecommendations();
+        
+        // Update charts using the recommendations
+        updateChart(machineId, payout, recommendations);
+        
+        // Update regret chart with all recommendations - pass the full recommendations object
+        // Note: Remove reference to optimalMachineId since it's not defined and we're using recommendations now
+        updateRegretChart(machineId, null, recommendations);
     }
-    
-    // Update charts
-    updateChart(machineId, payout, optimalMachineId);
-    updateRegretChart(machineId, optimalMachineId);
 }
 
 // Export the necessary functions and data
@@ -416,6 +428,7 @@ export {
     setOriginalMachineConfigs,
     forcePermutation,
     currentMachineConfigs,
+    setStrategyManager, // Add this export
     initializeStrategy,
     optimalStrategy
 };
