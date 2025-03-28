@@ -1,4 +1,5 @@
 import { StrategyFactory } from './strategies/Strategy.js';
+import { Distributions } from './distributions.js';
 
 /**
  * Class to manage multiple strategies simultaneously
@@ -100,8 +101,66 @@ export class MultiStrategyManager {
      * @param {number} payout - The payout received
      */
     update(machineId, payout) {
+        // This method should NOT directly update strategies with user pulls
+        
+        // Instead, for each strategy:
+        // 1. Get its recommendation (which machine it would have chosen)
+        // 2. Simulate a pull for that recommended machine
+        // 3. Update the strategy with the simulated result
+        
         for (const type in this.strategies) {
-            this.strategies[type].update(machineId, payout);
+            if (!this.isStrategySelected(type)) continue;
+            
+            // Get the current recommendation from this strategy
+            const strategy = this.strategies[type];
+            const recommendedMachineId = strategy.selectMachine();
+            
+            // Simulate a pull for the recommended machine
+            const machineConfig = this.machineConfigs.find(c => c.id === recommendedMachineId);
+            if (machineConfig) {
+                // Get the current configuration (which might have been swapped in Hard Mode)
+                const currentConfig = getCurrentMachineConfig(recommendedMachineId);
+                
+                // Sample from the distribution for this machine
+                const simulatedPayout = Distributions.sample(
+                    currentConfig.distribution, 
+                    currentConfig.parameters
+                );
+                
+                // Update the strategy with its own choice and result
+                strategy.update(recommendedMachineId, simulatedPayout);
+                
+                console.log(`Strategy ${type} chose machine ${recommendedMachineId+1}, got payout ${simulatedPayout.toFixed(2)}`);
+            }
+        }
+        
+        // After updating all strategies, recalculate recommendations
+        this.calculateRecommendations();
+    }
+    
+    /**
+     * Update all strategies with all payouts from a round
+     * @param {Object} roundPayouts - Map of machine IDs to payouts
+     */
+    simulateStrategiesWithPayouts(roundPayouts) {
+        for (const type in this.strategies) {
+            //if (!this.isStrategySelected(type)) continue;
+            
+            // Get the machine this strategy would choose
+            const strategy = this.strategies[type];
+            const recommendedMachineId = strategy.selectMachine();
+            
+            // Use the pre-generated payout for this machine
+            if (roundPayouts[recommendedMachineId] !== undefined) {
+                const simulatedPayout = roundPayouts[recommendedMachineId];
+                
+                // Update the strategy with its own choice and the corresponding payout
+                strategy.update(recommendedMachineId, simulatedPayout);
+                
+                console.log(`Strategy ${type} chose machine ${recommendedMachineId+1}, got payout ${simulatedPayout.toFixed(2)}`);
+            } else {
+                console.error(`No payout found for machine ${recommendedMachineId} chosen by strategy ${type}`);
+            }
         }
     }
     
@@ -206,12 +265,16 @@ export class MultiStrategyManager {
     
     /**
      * Handle notification of permutation for strategies that support it
+     * @param {Array} newConfigs - The new machine configurations after permutation
      */
-    handlePermutation() {
+    handlePermutation(newConfigs) {
         for (const type in this.strategies) {
+            if (!this.isStrategySelected(type)) continue;
+            
             const strategy = this.strategies[type];
             if (typeof strategy.handlePermutation === 'function') {
-                strategy.handlePermutation(this.machineConfigs);
+                strategy.handlePermutation(newConfigs);
+                console.log(`Notified ${type} strategy of permutation`);
             }
         }
     }

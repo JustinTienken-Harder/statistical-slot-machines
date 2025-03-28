@@ -222,7 +222,7 @@ function permuteAndUpdateMachines() {
     
     // Update machine displays with the new configurations (only visible in stats)
     updateMachineDisplays();
-    
+        
     return true;
 }
 
@@ -342,7 +342,26 @@ function createSlotMachine(config) {
     return machineElement;
 }
 
-// Fix the permutation code to directly handle the 5% chance
+// Function to generate payouts for all machines in a single round
+function generateRoundPayouts(pulledMachineId, actualPayout) {
+    let roundPayouts = {};
+    
+    // For each machine configuration
+    currentMachineConfigs.forEach(config => {
+        if (config.id === pulledMachineId) {
+            // For the machine that was pulled, use the actual result
+            roundPayouts[config.id] = actualPayout;
+        } else {
+            // For other machines, sample from their distributions
+            const payout = Distributions.sample(config.distribution, config.parameters);
+            roundPayouts[config.id] = payout;
+        }
+    });
+    
+    console.log("Round payouts generated:", roundPayouts);
+    return roundPayouts;
+}
+
 function pullLever(machineId, distribution, parameters) {
     // Hard Mode: Check for permutation with a 5% chance
     if (hardModeEnabled && Math.random() < 0.05) {
@@ -393,26 +412,24 @@ function pullLever(machineId, distribution, parameters) {
     document.getElementById(`avg-payout-${machineId}`).textContent = 
         (machineData[machineId].totalPayout / machineData[machineId].pulls).toFixed(2);
     
+    // Generate payouts for all machines in this round
+    const roundPayouts = generateRoundPayouts(machineId, payout);
+    
     // Update total pulls
     totalPulls++;
     
-    // Update optimal strategy with the result of this pull
-    if (optimalStrategy) {
-        optimalStrategy.update(machineId, payout);
-    }
-    
-    // Update all strategies with the result
+    // DON'T update strategies with user pulls - instead use simulated payouts
     if (strategyManager) {
-        strategyManager.update(machineId, payout);
+        // Update strategies with simulated payouts for their recommendations
+        strategyManager.simulateStrategiesWithPayouts(roundPayouts);
         
-        // Get recommendations from all active strategies
+        // Get recommendations from all active strategies WITHOUT updating them with this pull
         const recommendations = strategyManager.getRecommendations();
         
         // Update charts using the recommendations
         updateChart(machineId, payout, recommendations);
         
-        // Update regret chart with all recommendations - pass the full recommendations object
-        // Note: Remove reference to optimalMachineId since it's not defined and we're using recommendations now
+        // Update regret chart with all recommendations
         updateRegretChart(machineId, null, recommendations);
     }
 }
@@ -428,7 +445,8 @@ export {
     setOriginalMachineConfigs,
     forcePermutation,
     currentMachineConfigs,
-    setStrategyManager, // Add this export
+    setStrategyManager,
     initializeStrategy,
-    optimalStrategy
+    optimalStrategy,
+    generateRoundPayouts  // Export the new function
 };
