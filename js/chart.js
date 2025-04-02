@@ -83,7 +83,12 @@ function initializeChart(configs) {
                 y: {
                     title: {
                         display: true,
-                        text: 'Total Payout'
+                        text: 'Total Payout ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toFixed(2);
+                        }
                     }
                 }
             },
@@ -302,7 +307,7 @@ function updateChart(pulledMachineId, actualPayout, recommendations) {
             optimalStrategyTotalPayout = strategyPayouts[type];
         }
     }
-    console.log(`Pull ${totalPulls}: Your=${userTotalPayout.toFixed(2)}, Optimal=${optimalStrategyTotalPayout.toFixed(2)}, Best Possible=${bestPossibleTotalPayout.toFixed(2)}`);
+    console.log(`Pull ${totalPulls}: Your=$${userTotalPayout.toFixed(2)}, Optimal=$${optimalStrategyTotalPayout.toFixed(2)}, Best Possible=$${bestPossibleTotalPayout.toFixed(2)}`);
 }
 
 // Helper function to add a dataset for a new strategy

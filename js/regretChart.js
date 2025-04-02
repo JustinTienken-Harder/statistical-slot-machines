@@ -296,7 +296,7 @@ function updateRegretChart(machinePulled, optimalMachineId, recommendations) {
         
         if (strategyDatasetIndex !== -1) {
             // Update dataset with new value
-            regretChart.data.datasets[strategyDatasetIndex].data.push(strategyRegrets[strategyType]);
+            regretChart.data.datasets[strategyDatasetIndex].data.push(strategyRegrets[strategyDatasetIndex]);
             
             // Keep only the last maxDataPoints
             if (regretChart.data.datasets[strategyDatasetIndex].data.length > maxDataPoints) {
@@ -332,9 +332,9 @@ function updateRegretChart(machinePulled, optimalMachineId, recommendations) {
     }
     
     // Log regret for debugging
-    console.log(`Pull ${totalPulls} Regret - User: ${userRegret.toFixed(3)} (Total: ${userCumulativeRegret.toFixed(3)})`);
+    console.log(`Pull ${totalPulls} Regret - User: $${userRegret.toFixed(3)} (Total: $${userCumulativeRegret.toFixed(3)})`);
     for (const strategyType in strategyRegrets) {
-        console.log(`  ${strategyType}: Total: ${strategyRegrets[strategyType].toFixed(3)}`);
+        console.log(`  ${strategyType}: Total: $${strategyRegrets[strategyType].toFixed(3)}`);
     }
 }
 

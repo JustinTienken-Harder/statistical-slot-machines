@@ -394,7 +394,8 @@ function pullLever(machineId, distribution, parameters) {
     
     // Update display
     const resultElement = document.getElementById(`result-${machineId}`);
-    resultElement.textContent = formattedPayout;
+    // Add dollar sign here
+    resultElement.textContent = '$' + formattedPayout;
     
     // Apply different styling for negative payouts
     if (payout < 0) {
@@ -410,7 +411,7 @@ function pullLever(machineId, distribution, parameters) {
     
     document.getElementById(`pulls-${machineId}`).textContent = machineData[machineId].pulls;
     document.getElementById(`avg-payout-${machineId}`).textContent = 
-        (machineData[machineId].totalPayout / machineData[machineId].pulls).toFixed(2);
+        '$' + (machineData[machineId].totalPayout / machineData[machineId].pulls).toFixed(2);
     
     // Generate payouts for all machines in this round
     const roundPayouts = generateRoundPayouts(machineId, payout);
